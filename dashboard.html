@@ -276,7 +276,7 @@
         const SUPABASE_URL = 'https://xbtdtoojkssbjdprlaod.supabase.co';
         const SUPABASE_KEY = 'sb_publishable__XZWdLj4cws7d5q029DJeg_80ZeMGsv';
 
-        let supabase;
+        let supabaseClient;
         let allData = [];
         let learnersMap = {};
         let currentSessionId = null;
@@ -293,7 +293,7 @@
                 }
 
                 console.log('Creating Supabase client...');
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 console.log('Supabase client created');
 
                 // Load learners first
@@ -318,7 +318,7 @@
         async function loadLearners() {
             try {
                 console.log('Fetching from learners table...');
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('learners')
                     .select('id,email,first_name,last_name');
 
@@ -349,7 +349,7 @@
         async function loadChatHistories() {
             try {
                 console.log('Fetching from n8n_chat_histories table...');
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('n8n_chat_histories')
                     .select('id,session_id,message')
                     .order('id', { ascending: true });
