@@ -311,6 +311,23 @@
             background: #555;
         }
 
+        .delete-btn {
+            background: transparent;
+            color: #ff4444;
+            border: 1px solid #ff4444;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: #ff4444;
+            color: white;
+        }
+
         @media (max-width: 900px) {
             .container {
                 grid-template-columns: 1fr;
@@ -650,6 +667,7 @@
                     <h2>${session.learnerName || session.learnerEmail || 'Conversation'}</h2>
                     ${learnerInfo}
                 </div>
+                <button class="delete-btn" onclick="deleteSession('${session.sessionId}')">Delete</button>
             `;
 
             const container = document.getElementById('messagesContainer');
@@ -668,6 +686,36 @@
             setTimeout(() => {
                 container.scrollTop = container.scrollHeight;
             }, 0);
+        }
+
+        async function deleteSession(sessionId) {
+            if (!confirm('Delete this entire conversation? This cannot be undone.')) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('n8n_chat_histories')
+                    .delete()
+                    .eq('session_id', sessionId);
+
+                if (error) {
+                    alert('Delete failed: ' + error.message);
+                    return;
+                }
+
+                // Remove from in-memory store and re-render
+                allData = allData.filter(s => s.sessionId !== sessionId);
+                currentSessionId = null;
+
+                // Reset chat panel
+                document.getElementById('chatHeader').innerHTML = '<div><h2>Select a conversation to view</h2></div>';
+                document.getElementById('messagesContainer').innerHTML = '<div class="empty-state">Select a conversation from the left to view messages</div>';
+
+                renderSessions();
+                console.log('Conversation deleted:', sessionId);
+            } catch (error) {
+                console.error('Error deleting conversation:', error);
+                alert('Delete failed: ' + error.message);
+            }
         }
 
         function escapeHtml(text) {
