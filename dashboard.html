@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>n8n Chat History Dashboard</title>
+    <title>PT Academy — Chat History Dashboard</title>
+    <link rel="icon" type="image/png" href="https://www.ptacademy.com/favicon.png">
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans|Squada+One" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
@@ -13,10 +15,15 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Open Sans', sans-serif;
+            background: #F1F1F1;
             min-height: 100vh;
             padding: 20px;
+            color: #343434;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Squada One', sans-serif;
         }
 
         .container {
@@ -39,11 +46,20 @@
 
         .sidebar-header {
             padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #161616;
             color: white;
-            font-size: 18px;
-            font-weight: 600;
-            border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+            border-bottom: 3px solid #D4AF37;
+        }
+
+        .brand-logo {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .brand-subtitle {
+            font-size: 12px;
+            opacity: 0.8;
         }
 
         .search-input {
@@ -59,8 +75,8 @@
 
         .search-input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #D4AF37;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
         }
 
         .search-input::placeholder {
@@ -86,8 +102,8 @@
 
         .date-input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #D4AF37;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
         }
 
         .date-separator {
@@ -118,9 +134,15 @@
         }
 
         .session-item.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-left-color: white;
+            background: #FFED18;
+            color: #343434;
+            border-left-color: #D4AF37;
+        }
+
+        .session-item.active .session-id,
+        .session-item.active .session-preview,
+        .session-item.active .session-meta {
+            color: #343434;
         }
 
         .session-id {
@@ -155,12 +177,17 @@
 
         .chat-header {
             padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #161616;
             color: white;
-            border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+            border-bottom: 3px solid #D4AF37;
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .chat-header h2 {
+            color: white;
+            margin-bottom: 8px;
         }
 
         .chat-header h2 {
@@ -221,8 +248,8 @@
         }
 
         .message.human .message-content {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #FFED18;
+            color: #343434;
         }
 
         .message.ai .message-content {
@@ -303,7 +330,10 @@
 <body>
     <div class="container">
         <div class="sidebar">
-            <div class="sidebar-header">Conversations</div>
+            <div class="sidebar-header">
+                <div class="brand-logo">PT Academy</div>
+                <div class="brand-subtitle">Chat History</div>
+            </div>
             <input type="search" id="searchInput" class="search-input" placeholder="Search by learner...">
             <div class="date-filter">
                 <input type="date" id="dateFrom" class="date-input" title="From">
@@ -541,7 +571,7 @@
                     : (session.learnerEmail || 'Unknown');
 
                 const dateStr = session.createdAt
-                    ? session.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    ? session.createdAt.toLocaleString('en-GB', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                     : '';
 
                 return `
@@ -590,7 +620,7 @@
             }
 
             if (session.createdAt) {
-                const dateTime = session.createdAt.toLocaleString('en-US', {
+                const dateTime = session.createdAt.toLocaleString('en-GB', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',
