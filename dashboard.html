@@ -361,52 +361,56 @@
 
                 console.log('Chat histories data received, count:', data?.length);
 
-            const sessions = {};
+                const sessions = {};
 
-            if (data) {
-                data.forEach(row => {
-                    const sessionId = row.session_id;
-                    const message = typeof row.message === 'string' ? JSON.parse(row.message) : row.message;
+                if (data) {
+                    data.forEach(row => {
+                        const sessionId = row.session_id;
+                        const message = typeof row.message === 'string' ? JSON.parse(row.message) : row.message;
 
-                    if (!sessions[sessionId]) {
-                        sessions[sessionId] = [];
-                    }
+                        if (!sessions[sessionId]) {
+                            sessions[sessionId] = [];
+                        }
 
-                    sessions[sessionId].push({
-                        id: row.id,
-                        type: message.type,
-                        content: message.content || ''
+                        sessions[sessionId].push({
+                            id: row.id,
+                            type: message.type,
+                            content: message.content || ''
+                        });
                     });
-                });
-            }
+                }
 
-            allData = Object.entries(sessions).map(([sessionId, messages]) => {
-                // Extract learner email from messages
-                let learnerEmail = null;
-                for (const msg of messages) {
-                    const emailMatch = msg.content.match(/([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-                    if (emailMatch) {
-                        learnerEmail = emailMatch[1];
-                        break;
+                allData = Object.entries(sessions).map(([sessionId, messages]) => {
+                    // Extract learner email from messages
+                    let learnerEmail = null;
+                    for (const msg of messages) {
+                        const emailMatch = msg.content.match(/([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+                        if (emailMatch) {
+                            learnerEmail = emailMatch[1];
+                            break;
+                        }
                     }
-                }
 
-                // Get learner info
-                let learnerName = null;
-                if (learnerEmail && learnersMap[learnerEmail]) {
-                    const learner = learnersMap[learnerEmail];
-                    learnerName = `${learner.firstName} ${learner.lastName}`;
-                }
+                    // Get learner info
+                    let learnerName = null;
+                    if (learnerEmail && learnersMap[learnerEmail]) {
+                        const learner = learnersMap[learnerEmail];
+                        learnerName = `${learner.firstName} ${learner.lastName}`;
+                    }
 
-                return {
-                    sessionId,
-                    messages,
-                    learnerEmail,
-                    learnerName,
-                    messageCount: messages.length,
-                    preview: messages[0]?.content?.substring(0, 100) || 'No preview'
-                };
-            }).sort((a, b) => b.messageCount - a.messageCount);
+                    return {
+                        sessionId,
+                        messages,
+                        learnerEmail,
+                        learnerName,
+                        messageCount: messages.length,
+                        preview: messages[0]?.content?.substring(0, 100) || 'No preview'
+                    };
+                }).sort((a, b) => b.messageCount - a.messageCount);
+            } catch (error) {
+                console.error('Error in loadChatHistories:', error);
+                throw error;
+            }
         }
 
         function renderSessions() {
