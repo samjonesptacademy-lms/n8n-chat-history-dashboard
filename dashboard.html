@@ -431,10 +431,11 @@
 
                 console.log('Learners data received, count:', allLearners.length);
 
-                // Create a map for quick lookup by email
+                // Create a map for quick lookup by email (normalized to lowercase)
                 learnersMap = {};
                 allLearners.forEach(learner => {
-                    learnersMap[learner.email] = {
+                    const emailKey = learner.email.toLowerCase();
+                    learnersMap[emailKey] = {
                         firstName: learner.first_name,
                         lastName: learner.last_name,
                         email: learner.email
@@ -512,9 +513,12 @@
 
                     // Get learner info
                     let learnerName = null;
-                    if (learnerEmail && learnersMap[learnerEmail]) {
-                        const learner = learnersMap[learnerEmail];
-                        learnerName = `${learner.firstName} ${learner.lastName}`;
+                    if (learnerEmail) {
+                        const learnerEmailLower = learnerEmail.toLowerCase();
+                        if (learnersMap[learnerEmailLower]) {
+                            const learner = learnersMap[learnerEmailLower];
+                            learnerName = `${learner.firstName} ${learner.lastName}`;
+                        }
                     }
 
                     return {
