@@ -349,41 +349,53 @@
         async function loadChatHistories() {
             try {
                 console.log('Fetching from n8n_chat_histories table...');
-                const { data, error } = await supabaseClient
-                    .from('n8n_chat_histories')
-                    .select('id,session_id,message')
-                    .order('id', { ascending: true });
 
-                if (error) {
-                    console.error('Supabase error loading chat histories:', error);
-                    throw error;
+                const PAGE_SIZE = 1000;
+                let from = 0;
+                let allRows = [];
+
+                while (true) {
+                    const { data, error } = await supabaseClient
+                        .from('n8n_chat_histories')
+                        .select('id,session_id,message')
+                        .order('id', { ascending: true })
+                        .range(from, from + PAGE_SIZE - 1);
+
+                    if (error) {
+                        console.error('Supabase error loading chat histories:', error);
+                        throw error;
+                    }
+
+                    if (!data || data.length === 0) break;
+                    allRows = allRows.concat(data);
+                    if (data.length < PAGE_SIZE) break;
+                    from += PAGE_SIZE;
                 }
 
-                console.log('Chat histories data received, count:', data?.length);
+                console.log('Chat histories data received, count:', allRows.length);
 
                 const sessions = {};
 
-                if (data) {
-                    data.forEach(row => {
-                        const sessionId = row.session_id;
-                        const message = typeof row.message === 'string' ? JSON.parse(row.message) : row.message;
+                allRows.forEach(row => {
+                    const sessionId = row.session_id;
+                    const message = typeof row.message === 'string' ? JSON.parse(row.message) : row.message;
 
-                        if (!sessions[sessionId]) {
-                            sessions[sessionId] = [];
-                        }
+                    if (!sessions[sessionId]) {
+                        sessions[sessionId] = [];
+                    }
 
-                        sessions[sessionId].push({
-                            id: row.id,
-                            type: message.type,
-                            content: message.content || ''
-                        });
+                    sessions[sessionId].push({
+                        id: row.id,
+                        type: message.type,
+                        content: message.content || ''
                     });
-                }
+                });
 
                 allData = Object.entries(sessions).map(([sessionId, messages]) => {
-                    // Extract learner email from messages
+                    // Extract email only from human messages where the learner typed it
                     let learnerEmail = null;
                     for (const msg of messages) {
+                        if (msg.type !== 'human') continue;
                         const emailMatch = msg.content.match(/([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
                         if (emailMatch) {
                             learnerEmail = emailMatch[1];
