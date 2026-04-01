@@ -46,6 +46,27 @@
             border-bottom: 2px solid rgba(0, 0, 0, 0.1);
         }
 
+        .search-input {
+            padding: 12px 15px;
+            margin: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            width: calc(100% - 20px);
+            font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-input::placeholder {
+            color: #999;
+        }
+
         .sessions-list {
             flex: 1;
             overflow-y: auto;
@@ -254,6 +275,7 @@
     <div class="container">
         <div class="sidebar">
             <div class="sidebar-header">Conversations</div>
+            <input type="search" id="searchInput" class="search-input" placeholder="Search by learner...">
             <div class="sessions-list" id="sessionsList">
                 <div class="no-sessions">Loading conversations...</div>
             </div>
@@ -280,6 +302,7 @@
         let allData = [];
         let learnersMap = {};
         let currentSessionId = null;
+        let filterQuery = '';
 
         async function initializeDashboard() {
             console.log('Starting dashboard initialization...');
@@ -429,38 +452,62 @@
             const list = document.getElementById('sessionsList');
             const stats = document.getElementById('stats');
 
+            // Filter sessions based on search query
+            const filteredData = allData.filter(session => {
+                if (!filterQuery) return true;
+                const query = filterQuery.toLowerCase();
+                const learnerName = (session.learnerName || '').toLowerCase();
+                const learnerEmail = (session.learnerEmail || '').toLowerCase();
+                return learnerName.includes(query) || learnerEmail.includes(query);
+            });
+
             if (allData.length === 0) {
                 list.innerHTML = '<div class="no-sessions">No conversations found</div>';
                 stats.textContent = 'Total: 0 conversations';
                 return;
             }
 
-            list.innerHTML = allData.map((session, index) => {
+            if (filteredData.length === 0) {
+                list.innerHTML = '<div class="no-sessions">No conversations match your search</div>';
+                stats.textContent = `0 of ${allData.length} conversations`;
+                return;
+            }
+
+            list.innerHTML = filteredData.map((session, index) => {
                 const learnerDisplay = session.learnerName
                     ? session.learnerName
                     : (session.learnerEmail || 'Unknown');
 
                 return `
-                    <div class="session-item" onclick="selectSession('${session.sessionId}', ${index})">
-                        <div class="session-id">Session ${index + 1}</div>
+                    <div class="session-item" data-session-id="${session.sessionId}" onclick="selectSession('${session.sessionId}')">
+                        <div class="session-id">${learnerDisplay}</div>
                         <div class="session-preview">${escapeHtml(session.preview)}</div>
                         <div class="session-meta">
-                            ${session.messageCount} messages • ${learnerDisplay}
+                            ${session.messageCount} messages
                         </div>
                     </div>
                 `;
             }).join('');
 
-            stats.textContent = `Total: ${allData.length} conversations`;
+            const countText = filterQuery
+                ? `${filteredData.length} of ${allData.length} conversations`
+                : `Total: ${allData.length} conversations`;
+            stats.textContent = countText;
         }
 
-        function selectSession(sessionId, index) {
+        function selectSession(sessionId) {
             currentSessionId = sessionId;
-            const session = allData[index];
+            const session = allData.find(s => s.sessionId === sessionId);
+
+            if (!session) {
+                console.error('Session not found:', sessionId);
+                return;
+            }
 
             // Update active state
-            document.querySelectorAll('.session-item').forEach((el, i) => {
-                el.classList.toggle('active', i === index);
+            document.querySelectorAll('.session-item').forEach((el) => {
+                const isActive = el.getAttribute('data-session-id') === sessionId;
+                el.classList.toggle('active', isActive);
             });
 
             // Render chat
@@ -506,7 +553,16 @@
         }
 
         // Initialize on page load
-        document.addEventListener('DOMContentLoaded', initializeDashboard);
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeDashboard();
+
+            // Set up search listener
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', (e) => {
+                filterQuery = e.target.value;
+                renderSessions();
+            });
+        });
     </script>
 </body>
 </html>
