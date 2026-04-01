@@ -380,7 +380,7 @@
                 while (true) {
                     const { data, error } = await supabaseClient
                         .from('n8n_chat_histories')
-                        .select('id,session_id,message')
+                        .select('id,session_id,message,created_at')
                         .order('id', { ascending: true })
                         .range(from, from + PAGE_SIZE - 1);
 
@@ -404,17 +404,23 @@
                     const message = typeof row.message === 'string' ? JSON.parse(row.message) : row.message;
 
                     if (!sessions[sessionId]) {
-                        sessions[sessionId] = [];
+                        sessions[sessionId] = {
+                            messages: [],
+                            createdAt: row.created_at
+                        };
                     }
 
-                    sessions[sessionId].push({
+                    sessions[sessionId].messages.push({
                         id: row.id,
                         type: message.type,
                         content: message.content || ''
                     });
                 });
 
-                allData = Object.entries(sessions).map(([sessionId, messages]) => {
+                allData = Object.entries(sessions).map(([sessionId, sessionData]) => {
+                    const messages = sessionData.messages;
+                    const createdAt = sessionData.createdAt;
+
                     // Extract email only from human messages where the learner typed it
                     let learnerEmail = null;
                     for (const msg of messages) {
@@ -439,9 +445,16 @@
                         learnerEmail,
                         learnerName,
                         messageCount: messages.length,
-                        preview: messages[0]?.content?.substring(0, 100) || 'No preview'
+                        preview: messages[0]?.content?.substring(0, 100) || 'No preview',
+                        createdAt: createdAt ? new Date(createdAt) : null
                     };
-                }).sort((a, b) => b.messageCount - a.messageCount);
+                }).sort((a, b) => {
+                    // Sort by created_at (newest first), fall back to message count
+                    if (a.createdAt && b.createdAt) {
+                        return b.createdAt - a.createdAt;
+                    }
+                    return b.messageCount - a.messageCount;
+                });
             } catch (error) {
                 console.error('Error in loadChatHistories:', error);
                 throw error;
@@ -478,12 +491,16 @@
                     ? session.learnerName
                     : (session.learnerEmail || 'Unknown');
 
+                const dateStr = session.createdAt
+                    ? session.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    : '';
+
                 return `
                     <div class="session-item" data-session-id="${session.sessionId}" onclick="selectSession('${session.sessionId}')">
                         <div class="session-id">${learnerDisplay}</div>
                         <div class="session-preview">${escapeHtml(session.preview)}</div>
                         <div class="session-meta">
-                            ${session.messageCount} messages
+                            ${session.messageCount} messages ${dateStr ? '• ' + dateStr : ''}
                         </div>
                     </div>
                 `;
@@ -521,6 +538,17 @@
                 }
             } else if (session.learnerEmail) {
                 learnerInfo = `<div class="learner-info">📧 ${session.learnerEmail}</div>`;
+            }
+
+            if (session.createdAt) {
+                const dateTime = session.createdAt.toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                learnerInfo += `<div class="learner-info" style="font-size: 12px; opacity: 0.6;">📅 ${dateTime}</div>`;
             }
 
             header.innerHTML = `
