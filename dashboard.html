@@ -553,7 +553,7 @@
 
             header.innerHTML = `
                 <div>
-                    <h2>Conversation ${index + 1}</h2>
+                    <h2>${session.learnerName || session.learnerEmail || 'Conversation'}</h2>
                     ${learnerInfo}
                 </div>
             `;
