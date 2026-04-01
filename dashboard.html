@@ -67,6 +67,35 @@
             color: #999;
         }
 
+        .date-filter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 10px 10px 10px;
+        }
+
+        .date-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .date-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .date-separator {
+            font-size: 12px;
+            color: #999;
+            white-space: nowrap;
+        }
+
         .sessions-list {
             flex: 1;
             overflow-y: auto;
@@ -276,6 +305,11 @@
         <div class="sidebar">
             <div class="sidebar-header">Conversations</div>
             <input type="search" id="searchInput" class="search-input" placeholder="Search by learner...">
+            <div class="date-filter">
+                <input type="date" id="dateFrom" class="date-input" title="From">
+                <span class="date-separator">to</span>
+                <input type="date" id="dateTo" class="date-input" title="To">
+            </div>
             <div class="sessions-list" id="sessionsList">
                 <div class="no-sessions">Loading conversations...</div>
             </div>
@@ -303,6 +337,8 @@
         let learnersMap = {};
         let currentSessionId = null;
         let filterQuery = '';
+        let dateFrom = null;
+        let dateTo = null;
 
         async function initializeDashboard() {
             console.log('Starting dashboard initialization...');
@@ -466,13 +502,25 @@
             const list = document.getElementById('sessionsList');
             const stats = document.getElementById('stats');
 
-            // Filter sessions based on search query
+            // Filter sessions based on search query and date range
             const filteredData = allData.filter(session => {
-                if (!filterQuery) return true;
-                const query = filterQuery.toLowerCase();
-                const learnerName = (session.learnerName || '').toLowerCase();
-                const learnerEmail = (session.learnerEmail || '').toLowerCase();
-                return learnerName.includes(query) || learnerEmail.includes(query);
+                // Learner search filter
+                if (filterQuery) {
+                    const query = filterQuery.toLowerCase();
+                    const learnerName = (session.learnerName || '').toLowerCase();
+                    const learnerEmail = (session.learnerEmail || '').toLowerCase();
+                    if (!learnerName.includes(query) && !learnerEmail.includes(query)) {
+                        return false;
+                    }
+                }
+
+                // Date range filter
+                if (session.createdAt) {
+                    if (dateFrom && session.createdAt < dateFrom) return false;
+                    if (dateTo && session.createdAt > dateTo) return false;
+                }
+
+                return true;
             });
 
             if (allData.length === 0) {
@@ -591,6 +639,21 @@
             const searchInput = document.getElementById('searchInput');
             searchInput.addEventListener('input', (e) => {
                 filterQuery = e.target.value;
+                renderSessions();
+            });
+
+            // Set up date range listeners
+            const dateFromInput = document.getElementById('dateFrom');
+            const dateToInput = document.getElementById('dateTo');
+
+            dateFromInput.addEventListener('change', (e) => {
+                dateFrom = e.target.value ? new Date(e.target.value) : null;
+                renderSessions();
+            });
+
+            dateToInput.addEventListener('change', (e) => {
+                // Set to end of the selected day so sessions on that day are included
+                dateTo = e.target.value ? new Date(e.target.value + 'T23:59:59') : null;
                 renderSessions();
             });
         });
