@@ -407,28 +407,39 @@
         async function loadLearners() {
             try {
                 console.log('Fetching from learners table...');
-                const { data, error } = await supabaseClient
-                    .from('learners')
-                    .select('id,email,first_name,last_name');
 
-                if (error) {
-                    console.error('Supabase error loading learners:', error);
-                    throw error;
+                const PAGE_SIZE = 1000;
+                let from = 0;
+                let allLearners = [];
+
+                while (true) {
+                    const { data, error } = await supabaseClient
+                        .from('learners')
+                        .select('id,email,first_name,last_name')
+                        .range(from, from + PAGE_SIZE - 1);
+
+                    if (error) {
+                        console.error('Supabase error loading learners:', error);
+                        throw error;
+                    }
+
+                    if (!data || data.length === 0) break;
+                    allLearners = allLearners.concat(data);
+                    if (data.length < PAGE_SIZE) break;
+                    from += PAGE_SIZE;
                 }
 
-                console.log('Learners data received:', data);
+                console.log('Learners data received, count:', allLearners.length);
 
                 // Create a map for quick lookup by email
                 learnersMap = {};
-                if (data) {
-                    data.forEach(learner => {
-                        learnersMap[learner.email] = {
-                            firstName: learner.first_name,
-                            lastName: learner.last_name,
-                            email: learner.email
-                        };
-                    });
-                }
+                allLearners.forEach(learner => {
+                    learnersMap[learner.email] = {
+                        firstName: learner.first_name,
+                        lastName: learner.last_name,
+                        email: learner.email
+                    };
+                });
             } catch (error) {
                 console.error('Error in loadLearners:', error);
                 throw error;
