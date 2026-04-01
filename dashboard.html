@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>n8n Chat History Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            height: 90vh;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .sessions-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .session-item {
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .session-item:hover {
+            background: #e8e8e8;
+            transform: translateX(5px);
+        }
+
+        .session-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-left-color: white;
+        }
+
+        .session-id {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            opacity: 0.8;
+        }
+
+        .session-preview {
+            font-size: 13px;
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .session-meta {
+            font-size: 11px;
+            margin-top: 6px;
+            opacity: 0.6;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header h2 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .learner-info {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .empty-state {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f9f9f9;
+        }
+
+        .message {
+            margin-bottom: 16px;
+            display: flex;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.human {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            font-size: 14px;
+            word-wrap: break-word;
+        }
+
+        .message.human .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message.ai .message-content {
+            background: #e8e8e8;
+            color: #333;
+        }
+
+        .message-label {
+            font-size: 11px;
+            color: #999;
+            margin-bottom: 4px;
+            padding: 0 4px;
+        }
+
+        .message.human .message-label {
+            text-align: right;
+            color: #667eea;
+        }
+
+        .message.ai .message-label {
+            text-align: left;
+            color: #666;
+        }
+
+        .no-sessions {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #999;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .stats {
+            padding: 12px 15px;
+            background: #f0f0f0;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .sidebar {
+                max-height: 300px;
+            }
+
+            .message-content {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-header">Conversations</div>
+            <div class="sessions-list" id="sessionsList">
+                <div class="no-sessions">Loading conversations...</div>
+            </div>
+            <div class="stats" id="stats"></div>
+        </div>
+
+        <div class="main-content">
+            <div class="chat-header" id="chatHeader">
+                <div>
+                    <h2>Select a conversation to view</h2>
+                </div>
+            </div>
+            <div class="messages-container" id="messagesContainer">
+                <div class="empty-state">Select a conversation from the left to view messages</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://xbtdtoojkssbjdprlaod.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable__XZWdLj4cws7d5q029DJeg_80ZeMGsv';
+
+        let supabase;
+        let allData = [];
+        let learnersMap = {};
+        let currentSessionId = null;
+
+        async function initializeDashboard() {
+            console.log('Starting dashboard initialization...');
+            console.log('Supabase URL:', SUPABASE_URL);
+            console.log('Supabase Key exists:', !!SUPABASE_KEY);
+
+            try {
+                // Check if Supabase is loaded
+                if (!window.supabase) {
+                    throw new Error('Supabase library not loaded. Check CDN connection.');
+                }
+
+                console.log('Creating Supabase client...');
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                console.log('Supabase client created');
+
+                // Load learners first
+                console.log('Loading learners...');
+                await loadLearners();
+                console.log('Learners loaded:', Object.keys(learnersMap).length);
+
+                // Load chat histories
+                console.log('Loading chat histories...');
+                await loadChatHistories();
+                console.log('Chat histories loaded:', allData.length);
+
+                renderSessions();
+                console.log('Dashboard rendered');
+            } catch (error) {
+                console.error('Error initializing dashboard:', error);
+                const list = document.getElementById('sessionsList');
+                list.innerHTML = `<div class="no-sessions">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function loadLearners() {
+            try {
+                console.log('Fetching from learners table...');
+                const { data, error } = await supabase
+                    .from('learners')
+                    .select('id,email,first_name,last_name');
+
+                if (error) {
+                    console.error('Supabase error loading learners:', error);
+                    throw error;
+                }
+
+                console.log('Learners data received:', data);
+
+                // Create a map for quick lookup by email
+                learnersMap = {};
+                if (data) {
+                    data.forEach(learner => {
+                        learnersMap[learner.email] = {
+                            firstName: learner.first_name,
+                            lastName: learner.last_name,
+                            email: learner.email
+                        };
+                    });
+                }
+            } catch (error) {
+                console.error('Error in loadLearners:', error);
+                throw error;
+            }
+        }
+
+        async function loadChatHistories() {
+            try {
+                console.log('Fetching from n8n_chat_histories table...');
+                const { data, error } = await supabase
+                    .from('n8n_chat_histories')
+                    .select('id,session_id,message')
+                    .order('id', { ascending: true });
+
+                if (error) {
+                    console.error('Supabase error loading chat histories:', error);
+                    throw error;
+                }
+
+                console.log('Chat histories data received, count:', data?.length);
+
+            const sessions = {};
+
+            if (data) {
+                data.forEach(row => {
+                    const sessionId = row.session_id;
+                    const message = typeof row.message === 'string' ? JSON.parse(row.message) : row.message;
+
+                    if (!sessions[sessionId]) {
+                        sessions[sessionId] = [];
+                    }
+
+                    sessions[sessionId].push({
+                        id: row.id,
+                        type: message.type,
+                        content: message.content || ''
+                    });
+                });
+            }
+
+            allData = Object.entries(sessions).map(([sessionId, messages]) => {
+                // Extract learner email from messages
+                let learnerEmail = null;
+                for (const msg of messages) {
+                    const emailMatch = msg.content.match(/([a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+                    if (emailMatch) {
+                        learnerEmail = emailMatch[1];
+                        break;
+                    }
+                }
+
+                // Get learner info
+                let learnerName = null;
+                if (learnerEmail && learnersMap[learnerEmail]) {
+                    const learner = learnersMap[learnerEmail];
+                    learnerName = `${learner.firstName} ${learner.lastName}`;
+                }
+
+                return {
+                    sessionId,
+                    messages,
+                    learnerEmail,
+                    learnerName,
+                    messageCount: messages.length,
+                    preview: messages[0]?.content?.substring(0, 100) || 'No preview'
+                };
+            }).sort((a, b) => b.messageCount - a.messageCount);
+        }
+
+        function renderSessions() {
+            const list = document.getElementById('sessionsList');
+            const stats = document.getElementById('stats');
+
+            if (allData.length === 0) {
+                list.innerHTML = '<div class="no-sessions">No conversations found</div>';
+                stats.textContent = 'Total: 0 conversations';
+                return;
+            }
+
+            list.innerHTML = allData.map((session, index) => {
+                const learnerDisplay = session.learnerName
+                    ? session.learnerName
+                    : (session.learnerEmail || 'Unknown');
+
+                return `
+                    <div class="session-item" onclick="selectSession('${session.sessionId}', ${index})">
+                        <div class="session-id">Session ${index + 1}</div>
+                        <div class="session-preview">${escapeHtml(session.preview)}</div>
+                        <div class="session-meta">
+                            ${session.messageCount} messages • ${learnerDisplay}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            stats.textContent = `Total: ${allData.length} conversations`;
+        }
+
+        function selectSession(sessionId, index) {
+            currentSessionId = sessionId;
+            const session = allData[index];
+
+            // Update active state
+            document.querySelectorAll('.session-item').forEach((el, i) => {
+                el.classList.toggle('active', i === index);
+            });
+
+            // Render chat
+            const header = document.getElementById('chatHeader');
+            let learnerInfo = '';
+
+            if (session.learnerName) {
+                learnerInfo = `<div class="learner-info">👤 ${session.learnerName}</div>`;
+                if (session.learnerEmail) {
+                    learnerInfo += `<div class="learner-info" style="font-size: 12px; opacity: 0.7;">📧 ${session.learnerEmail}</div>`;
+                }
+            } else if (session.learnerEmail) {
+                learnerInfo = `<div class="learner-info">📧 ${session.learnerEmail}</div>`;
+            }
+
+            header.innerHTML = `
+                <div>
+                    <h2>Conversation ${index + 1}</h2>
+                    ${learnerInfo}
+                </div>
+            `;
+
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = session.messages.map(msg => `
+                <div class="message ${msg.type}">
+                    <div>
+                        <div class="message-label">${msg.type === 'human' ? 'Learner' : 'Assistant'}</div>
+                        <div class="message-content">${escapeHtml(msg.content)}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Scroll to bottom
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 0);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initializeDashboard);
+    </script>
+</body>
+</html>
