@@ -413,7 +413,8 @@
                     sessions[sessionId].messages.push({
                         id: row.id,
                         type: message.type,
-                        content: message.content || ''
+                        content: message.content || '',
+                        hasToolCalls: Array.isArray(message.tool_calls) && message.tool_calls.length > 0
                     });
                 });
 
@@ -559,7 +560,9 @@
             `;
 
             const container = document.getElementById('messagesContainer');
-            container.innerHTML = session.messages.map(msg => `
+            container.innerHTML = session.messages
+                .filter(msg => msg.type !== 'tool' && !msg.hasToolCalls)
+                .map(msg => `
                 <div class="message ${msg.type}">
                     <div>
                         <div class="message-label">${msg.type === 'human' ? 'Learner' : 'Assistant'}</div>
